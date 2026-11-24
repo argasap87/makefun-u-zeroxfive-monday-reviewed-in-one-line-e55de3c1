@@ -14,11 +14,26 @@ import { mkdirSync, writeFileSync } from "node:fs";
 const LINE =
   "Monday arrived with zero motivation included, and the inbox came pre-loaded with 47 'quick questions.' 1/5 stars, would not re-order.";
 
-// Gate guard: the competition accepts a single line of 1–200 chars.
-// Reject anything outside that range instead of writing a bad entry.
-if (LINE.length < 1 || LINE.length > 200) {
-  throw new Error(`Entry line must be 1-200 chars, got ${LINE.length}`);
+// Gate guard (reviser pass): the competition accepts exactly one line of
+// 1-200 chars, UTF-8, non-whitespace. Fail loudly — clear message on
+// stderr plus a non-zero exit — rather than writing a bad entry, so a
+// broken line can never reach the grader.
+function validateLine(line: string): void {
+  if (line.length < 1 || line.length > 200) {
+    console.error(`error: entry line must be 1-200 chars, got ${line.length}`);
+    process.exit(1);
+  }
+  if (/\r|\n/.test(line)) {
+    console.error("error: entry must be a single line (no line breaks)");
+    process.exit(1);
+  }
+  if (!line.trim()) {
+    console.error("error: entry must not be empty or whitespace-only");
+    process.exit(1);
+  }
 }
+
+validateLine(LINE);
 
 mkdirSync("/output", { recursive: true });
 writeFileSync("/output/entry.txt", LINE + "\n", "utf8");
